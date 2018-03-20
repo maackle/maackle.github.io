@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+     
+    <title>pure scribble  | Encoding and Decoding JSON in PureScript</title>
+    <meta name="HandheldFriendly" content="True">
+    <meta name="MobileOptimized" content="320">
+
+    <meta name="viewport" content="width=device-width,minimum-scale=1">
+     <meta name="generator" content="Hugo 0.25.1" />
+      
+      
+        <META NAME="ROBOTS" CONTENT="NOINDEX, NOFOLLOW">
+      
+
+     <link href='//purescribble.org/dist/main.css' rel='stylesheet' type="text/css" />
+     <link rel="stylesheet" type="text/css" href="//purescribble.org/prism.css">
+<link rel="stylesheet" type="text/css" href="//purescribble.org/style.css">
+
+
+     
+
+      <meta property="og:title" content="Encoding and Decoding JSON in PureScript" />
+<meta property="og:description" content="Yesterday I wrote my first JSON encoder and decoder for a main data type in my application, and I want to walk you through my experience. I started out by attempting to leverage Generic types to get encoding/decoding for free, but found that I couldn&rsquo;t do that learned about automatically encoding/decoding Generic types, as well as writing manual parsers.
+
+" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="//purescribble.org/post/working-with-json-in-purescript/" />
+
+
+
+<meta property="article:published_time" content="2018-03-19T12:57:07-07:00"/>
+<meta property="article:modified_time" content="2018-03-19T12:57:07-07:00"/>
+
+
+
+
+
+
+
+
+
+
+
+<meta itemprop="name" content="Encoding and Decoding JSON in PureScript">
+<meta itemprop="description" content="Yesterday I wrote my first JSON encoder and decoder for a main data type in my application, and I want to walk you through my experience. I started out by attempting to leverage Generic types to get encoding/decoding for free, but found that I couldn&rsquo;t do that learned about automatically encoding/decoding Generic types, as well as writing manual parsers.
+
+">
+
+
+<meta itemprop="dateModified" content="2018-03-19T12:57:07-07:00" />
+<meta itemprop="wordCount" content="1515">
+
+
+
+<meta itemprop="keywords" content="" />
+
+
+  <meta name="twitter:card" content="summary"/>
+
+
+
+<meta name="twitter:text:title" content="Encoding and Decoding JSON in PureScript"/>
+<meta name="twitter:title" content="Encoding and Decoding JSON in PureScript"/>
+<meta name="twitter:description" content="Yesterday I wrote my first JSON encoder and decoder for a main data type in my application, and I want to walk you through my experience. I started out by attempting to leverage Generic types to get encoding/decoding for free, but found that I couldn&rsquo;t do that learned about automatically encoding/decoding Generic types, as well as writing manual parsers.
+
+"/>
+
+
+  </head>
+
+  <body class="ma0 avenir bg-near-white">
+
+    
+   
+  
+
+  <header>
+    <div class="bg-black">
+      <nav class="pv3 ph3 ph4-ns" role="navigation">
+  <div class="flex-l justify-between items-center center">
+    <a href="//purescribble.org/" class="f3 fw2 hover-white no-underline white-90 dib">
+      pure scribble
+    </a>
+    <div class="flex-l items-center">
+      
+        <ul class="pl0 mr3">
+          
+          <li class="list f5 f4-ns fw4 dib pr3">
+            <a class="hover-white no-underline white-90" href="/" title="Posts page">
+              Posts
+            </a>
+          </li>
+          
+          <li class="list f5 f4-ns fw4 dib pr3">
+            <a class="hover-white no-underline white-90" href="/page/about/" title="About page">
+              About
+            </a>
+          </li>
+          
+        </ul>
+      
+      
+
+
+
+
+
+
+    </div>
+  </div>
+</nav>
+
+    </div>
+  </header>
+
+
+
+    <main class="pb7" role="main">
+      
+  <div class="flex-l mt2 mw8 center">
+    <article class="center cf pv5 ph3 ph4-ns mw7">
+      <p class="f6 b helvetica tracked">
+        
+        POST
+      </p>
+      <h1 class="f1 athelas">
+        Encoding and Decoding JSON in PureScript
+      </h1>
+        
+        
+      <time class="f6 mv4 dib tracked" datetime="2018-03-19T12:57:07-07:00">
+        March 19, 2018
+      </time>
+      <section class="nested-copy-line-height lh-copy serif f4 nested-links nested-img mid-gray">
+        <p>Yesterday I wrote my first JSON encoder and decoder for a main data type in my application, and I want to walk you through my experience. I started out by attempting to leverage Generic types to get encoding/decoding for free, but found that I couldn&rsquo;t do that learned about automatically encoding/decoding Generic types, as well as writing manual parsers.</p>
+
+<p></p>
+
+<p>Here&rsquo;s the type we&rsquo;ll be working with:</p>
+
+<pre><code class="language-haskell">import Data.DateTime (Date, Time)
+
+newtype Event = Event
+  { key :: String
+  , name :: String
+  , dates :: Array Date
+  , times :: Array Time
+  }
+
+derive instance newtypeEvent :: Newtype Event _
+derive instance genericEvent :: Generic Event _
+</code></pre>
+
+<p>This represents an event poll with a range of dates and times which people can respond to with their availability.</p>
+
+<h2 id="generic-types-give-free-encoders-decoders">Generic types give free encoders / decoders</h2>
+
+<p>Now, when it came time to start sending this kind of data back and forth between the frontend and backend, the simplest thing I found that fit the bill was <a href="https://pursuit.purescript.org/packages/purescript-argonaut-generic/1.2.0/docs/Data.Argonaut.Encode.Generic.Rep#v:genericEncodeJson"><code>genericEncodeJson</code></a>, which has the following type:</p>
+
+<pre><code class="language-haskell">∀ a r. Generic a r =&gt; EncodeRep r =&gt; a -&gt; Json
+</code></pre>
+
+<p>As the type suggests, this promises automatic JSON encoding for any generic type which wraps an already-JSON-encodable value.</p>
+
+<p>Sweet, let&rsquo;s try it:</p>
+
+<pre><code class="language-haskell">test :: Event -&gt; Json
+test e = genericEncodeJson e
+</code></pre>
+
+<p>Uh oh, error:</p>
+
+<pre><code>No type class instance was found for
+Data.Argonaut.Encode.Class.EncodeJson Date
+</code></pre>
+
+<p>OK, right, I&rsquo;m dealing with <code>Date</code>s and <code>Time</code>s, and it seems that <code>Data.DateTime</code> doesn&rsquo;t define JSON encoders for its types. Hmmm&hellip;</p>
+
+<p>One thought is that I could write an EncodeJson instance for <code>Date</code> and <code>Time</code>. That idea quickly got shut down when I discovered that <a href="https://wiki.haskell.org/Orphan_instance">orphan instances</a> are disallowed in PureScript, meaning that I can&rsquo;t directly specify a new instance for a type in another module. Harumph.</p>
+
+<p>Well, has anybody else solved this problem already? I did find <a href="https://pursuit.purescript.org/packages/purescript-datetime-iso/1.0.2">purescript-datetime-iso</a>, which is remarkably close to what I want! It wraps <code>DateTime</code> in a newtype, and defines EncodeJson on that. This works around the orphan instance problem, however this is only for <code>DateTime</code>, and I want to work with <code>Date</code> and <code>Time</code> individually.</p>
+
+<p>Welp, better roll my own!</p>
+
+<h2 id="custom-json-encoding-decoding">Custom JSON Encoding/Decoding</h2>
+
+<p>Now I&rsquo;m using <a href="https://pursuit.purescript.org/packages/purescript-formatters/3.0.0">purescript-formatters</a> to do my own JSON encoding/decoding. Luckily it contains parsers for DateTime specific-stuff, so I should be good to go.</p>
+
+<h3 id="formatters">Formatters</h3>
+
+<p>Let&rsquo;s start by writing Formatters for Dates and Times. A <code>Formatter</code> is just a list of <code>FormatterCommand</code>s. Here are the three I need:</p>
+
+<pre><code class="language-haskell">import Data.List (fromFoldable, singleton)
+import Data.Formatter.DateTime (Formatter, FormatterCommand(..))
+
+dateFormatter :: Formatter
+dateFormatter =
+  [ YearFull
+  , Placeholder &quot;-&quot;
+  , MonthTwoDigits
+  , Placeholder &quot;-&quot;
+  , DayOfMonthTwoDigits
+  ] # fromFoldable
+
+timeFormatter :: Formatter
+timeFormatter =
+  [ Hours24
+  , Placeholder &quot;:&quot;
+  , MinutesTwoDigits
+  , Placeholder &quot;:&quot;
+  , SecondsTwoDigits
+  ] # fromFoldable
+
+datetimeFormatter :: Formatter
+datetimeFormatter
+  =  dateFormatter
+  &lt;&gt; singleton (Placeholder &quot;T&quot;)
+  &lt;&gt; timeFormatter
+  &lt;&gt; singleton (Placeholder &quot;Z&quot;)
+</code></pre>
+
+<p>The first two represent Dates like <code>&quot;2018-11-04&quot;</code> and Times like <code>&quot;16:20:00&quot;</code>. The third one combines the two to represent ISO date strings like <code>&quot;2018-11-04T16:20:00Z&quot;</code>.</p>
+
+<p>Now that I have Formatters for my types, we can use them to write an encoder and decoder</p>
+
+<h2 id="encodejson-instance">EncodeJson instance</h2>
+
+<p>OK, let&rsquo;s start with the encoder:</p>
+
+<pre><code class="language-haskell">
+import Data.Argonaut.Core (fromArray, fromObject, fromString)
+import Data.Formatter.DateTime (format)
+import Data.StrMap (fromFoldable)
+
+instance encodeJsonEvent :: EncodeJson Event where
+  
+  encodeJson :: Event -&gt; Json
+  encodeJson (Event e) =
+    fromObject $ fromFoldable
+      [ &quot;_id&quot; ! fromString e.key
+      , &quot;name&quot; ! fromString e.name
+      , &quot;dates&quot; ! (fromArray $ (fromString &lt;&lt;&lt; format dateFormatter &lt;&lt;&lt; expandDate) &lt;$&gt; e.dates)
+      , &quot;times&quot; ! (fromArray $ (fromString &lt;&lt;&lt; format timeFormatter &lt;&lt;&lt; expandTime) &lt;$&gt; e.times)
+      ]
+
+expandDate :: Date -&gt; DateTime
+expandDate date = DateTime date zeroTime
+  where zeroTime = unsafePartial $ fromJust $ Time &lt;$&gt; toEnum 0 &lt;*&gt; toEnum 0 &lt;*&gt; toEnum 0 &lt;*&gt; toEnum 0
+
+expandTime :: Time -&gt; DateTime
+expandTime time = DateTime zeroDate time
+  where zeroDate = unsafePartial $ fromJust $ canonicalDate &lt;$&gt; toEnum 1 &lt;*&gt; toEnum 1 &lt;*&gt; toEnum 1
+</code></pre>
+
+<p>Since <code>format</code> expects a <code>DateTime</code> and I&rsquo;m working directly with <code>Date</code> and <code>Time</code>, I needed two functions, <code>expandDate</code> and <code>expandTime</code> to fill out the missing parts with dummy data which will simply be discarded.</p>
+
+<p>So now I have an <code>EncodeJson</code> instance for <code>Event</code>, which means I can just write <code>encodeJson event</code> and get back a <code>Data.Argonaut.Core.Json</code>, which is just what I want.</p>
+
+<p>Note that since I wrote my own encoder, I had the opportunity to change the name of <code>&quot;key&quot;</code> to <code>&quot;_id&quot;</code>, since I am using MongoDB on the backend it expects that name for the unique identifier.</p>
+
+<p>Now for the Decoder.</p>
+
+<h2 id="decodejson-instance">DecodeJson instance</h2>
+
+<p>Writing the decoder was a <del>little</del> lot trickier! <code>encodeJson</code> is more straightforward because it takes you directly from <code>a -&gt; Json</code>, but <code>decodeJson</code> also handles errors and looks like <code>Json -&gt; Either String a</code>. To thoroughly handle all the possible errors, I needed some mind-mending (for me) monadic computation:</p>
+
+<pre><code class="language-haskell">import Data.Argonaut.Core (JArray, Json, JObject, toArray, toObject, toString)
+import Data.StrMap (StrMap, lookup)
+
+instance decodeJsonEvent :: DecodeJson Event where
+
+  decodeJson :: Json -&gt; Either String Event
+  decodeJson j = do
+    o &lt;- maybeToEither &quot;not an object&quot; $ toObject j
+    key &lt;- lookup' &quot;_id&quot; toString o
+    name &lt;- lookup' &quot;name&quot; toString o
+    dates &lt;- lookerUpper &quot;dates&quot; dateFormatter o
+    times &lt;- lookerUpper &quot;times&quot; timeFormatter o
+    pure $ Event
+      { key: key
+      , name: name
+      , dates: map date dates
+      , times: map time times
+      }
+    where
+      lookup' :: ∀ a. String -&gt; (Json -&gt; Maybe a) -&gt; StrMap Json -&gt; Either String a
+      lookup' k f = maybeToEither (&quot;Missing key &quot; &lt;&gt; k) &lt;&lt;&lt; (f &lt;=&lt; lookup k)
+
+      lookerUpper :: String -&gt; Formatter -&gt; JObject -&gt; Either String (Array DateTime)
+      lookerUpper k f o = do
+          strings :: Array String &lt;- sequence =&lt;&lt;
+            map (maybeToEither &quot;expected strings&quot; &lt;&lt;&lt; toString) &lt;$&gt;
+            (lookup' k toArray o)
+          dates :: Array DateTime &lt;- sequence $ map (unformat f) strings
+          pure dates
+
+      maybeToEither :: ∀ a b. b -&gt; Maybe a -&gt; Either b a
+      maybeToEither l =
+        maybe (Left l) Right
+
+</code></pre>
+
+<p>This deserves some explanation! Let&rsquo;s start with the three helper functions I defined in the <code>where</code> clause:</p>
+
+<ul>
+<li><p><code>maybeToEither</code> is used throughout to map <code>Nothing</code> to <code>Left msg</code> and <code>Just a</code> to <code>Right a</code></p></li>
+
+<li><p><code>lookup'</code> basically helps convert the regular <code>StrMap.lookup</code> from a <code>Maybe a</code> to a <code>Either String a</code>. It combines the regular lookup with a conversion function from Argonaut (e.g. <code>toString</code>) and provides a default error message if the lookup fails.</p></li>
+
+<li><p><code>lookerUpper</code> does the work of converting an array of Strings (hopefully representing Dates and Times) into an <code>Array (Either String DateTime)</code></p></li>
+</ul>
+
+<h3 id="decoding-arrays-of-datetimes">Decoding arrays of DateTimes</h3>
+
+<p><code>lookerUpper</code> is the real meat here. It&rsquo;s not a very well-written function in the sense that it is probably doing too much at once, but I had a hard to writing it so I&rsquo;m just happy it works! Here&rsquo;s roughly what it does, line by line:</p>
+
+<pre><code>strings :: Array String &lt;- sequence =&lt;&lt;
+</code></pre>
+
+<ol>
+<li>It looks up the key in the object and casts it to a JSON array</li>
+<li>It maps each element to a JSON string and makes an <code>Either</code> out of each to handle the potential failure of each individual string</li>
+<li>It runs it all through <code>sequence</code>, which converts the <code>Array (Either String String)</code> to <code>Either String (Array String)</code></li>
+</ol>
+
+<p>I have to stop here and say this is the first time I discovered <code>sequence</code>, and it is amazing for this purpose! It basically takes a monad-inside-a-monad and flips the whole thing inside out. In this case it collects all of these potentially failing <code>Either</code>s inside the <code>Array</code>, and boils it down to a single <code>Either</code> which either contains an error message for the whole array, or the whole <code>Array</code> of strings. So we started with an &ldquo;Array of Eithers&rdquo; and got an &ldquo;Either of Array&rdquo; (The only way for this to fail is if the array contains anything other than strings.)</p>
+
+<p>Now for the next bit:</p>
+
+<pre><code>dates :: Array DateTime &lt;- sequence $ map (unformat f) strings
+</code></pre>
+
+<p>This takes the <code>Array Strings</code> from the previous step (in the case of success) and does the actual parsing to get <code>Array DateTime</code>. Again I use <code>sequence</code> to collect all the inner Eithers into a single outer Either.</p>
+
+<p>Note that this is all happening within a <code>do</code> block under the Either monad. So each <code>&lt;-</code> binds to a <code>Right</code>, i.e. only if the parsing was successful. If a <code>Left</code> is generated, the <code>do</code> block does not go any further, and that is the value returned. So we can let the errors fall out naturally and only focus on the successful case.</p>
+
+<h3 id="putting-it-all-together">Putting it all together</h3>
+
+<p>Now armed with my unwieldy <code>lookerUpper</code>, I can convert arrays of strings to arrays of DateTime (or error messages). My formatter only returns <code>DateTime</code>s, but I want to work with <code>Date</code>s and <code>Time</code>s, so all that remains is to grab the part I want with <code>map date</code> and <code>map time</code></p>
+
+<h2 id="result">Result</h2>
+
+<p>Encoded JSON of a sample Event:</p>
+
+<pre><code class="language-json">{
+  &quot;_id&quot;: &quot;foobar&quot;,
+  &quot;name&quot;: &quot;Event Name&quot;,
+  &quot;dates&quot;: [&quot;2018-02-11&quot;, &quot;2018-02-12&quot;, ...],
+  &quot;times&quot;: [&quot;11:00:00&quot;, &quot;11:15:00&quot;, &quot;11:30:00&quot;, &quot;11:45:00&quot;, &quot;12:00:00&quot;, ...]
+}
+</code></pre>
+
+<p>I can take this same JSON and run it through <code>decodeJson</code> and either get an error message or an <code>Event</code> which I can start using directly! And it&rsquo;s all type-safe.</p>
+      </section>
+      
+
+
+    </article>
+    <div class="ph3 mt2 mt6-ns">
+      
+
+
+
+
+
+
+
+
+    </div>
+  </div>
+
+    </main>
+    <footer class="bg-near-black bottom-0 w-100 pa3" role="contentinfo">
+  <div class="flex justify-between">
+  <a class="f4 fw4 hover-white no-underline white-70 dn dib-ns pv2 ph3" href="//purescribble.org/" >
+    &copy; 2018 pure scribble
+  </a>
+  
+
+
+
+
+
+
+  </div>
+</footer>
+
+    <script src="//purescribble.org/dist/app.bundle.js" async></script>
+<script src="//purescribble.org/prism.js" async></script>
+
+  </body>
+</html>

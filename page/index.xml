@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Pages on pure scribble</title>
+    <link>//purescribble.org/page/</link>
+    <description>Recent content in Pages on pure scribble</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    
+	<atom:link href="//purescribble.org/page/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>About</title>
+      <link>//purescribble.org/page/about/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>//purescribble.org/page/about/</guid>
+      <description>I&amp;rsquo;m learning PureScript while I build a new web app called FuzzyTime. The app aims to be an alternative for Doodle with more flexible scheduling, making it easier to schedule over broader ranges of time, and taking participants actual preferences into account.
+The backend is dead-simple, and the frontend is a single-page app written in PureScript and pux. This blog mainly chronicles what I&amp;rsquo;ve learned while building the latter.</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,28 @@
+.bg-top {
+	background-position: center;
+}
+
+code, .code {
+	background: #eee;
+	border: 1px solid #ddd;
+	font-size: 18px;
+	display: inline-block;
+	padding: 0 3px;
+	margin: 0 1px;
+	border-radius: 4px;
+}
+
+pre[class*="language-"] {
+	padding: 0;
+	background: #333;
+}
+pre {
+	background: #333;
+}
+
+pre code {
+	background: inherit;
+	border: inherit;
+	padding: 1rem;
+	margin: 0;
+}

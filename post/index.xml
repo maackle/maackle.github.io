@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on pure scribble</title>
+    <link>//purescribble.org/post/</link>
+    <description>Recent content in Posts on pure scribble</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 19 Mar 2018 12:57:07 -0700</lastBuildDate>
+    
+	<atom:link href="//purescribble.org/post/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Encoding and Decoding JSON in PureScript</title>
+      <link>//purescribble.org/post/working-with-json-in-purescript/</link>
+      <pubDate>Mon, 19 Mar 2018 12:57:07 -0700</pubDate>
+      
+      <guid>//purescribble.org/post/working-with-json-in-purescript/</guid>
+      <description>&lt;p&gt;Yesterday I wrote my first JSON encoder and decoder for a main data type in my application, and I want to walk you through my experience. I started out by attempting to leverage Generic types to get encoding/decoding for free, but found that I couldn&amp;rsquo;t do that learned about automatically encoding/decoding Generic types, as well as writing manual parsers.&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;</description>
+    </item>
+    
+  </channel>
+</rss>
